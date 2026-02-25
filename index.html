@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Marksheet Print</title>
+<style>
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 20px; margin: 0; }
+    
+    .controls { max-width: 500px; margin: 0 auto 20px; text-align: center; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    input { padding: 10px; width: 150px; border: 1px solid #ccc; border-radius: 4px; outline: none; }
+    button { padding: 10px 15px; cursor: pointer; background: #0d6efd; color: #fff; border: none; border-radius: 4px; font-weight: bold; margin-left: 5px; }
+    
+    .marksheet { 
+        max-width: 650px; 
+        margin: 0 auto; 
+        background: #fff; 
+        padding: 30px; 
+        border: 2px solid #0d6efd; 
+        display: none; 
+        box-sizing: border-box;
+    }
+    
+    .header { text-align: center; border-bottom: 2px solid #0d6efd; margin-bottom: 20px; padding-bottom: 10px; }
+    .header h2 { margin: 0; color: #0d6efd; font-size: 24px; text-transform: uppercase; }
+    .header p { margin: 5px 0; font-size: 14px; font-weight: bold; }
+
+    .info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; font-size: 14px; }
+    .info div { background: #f9f9f9; padding: 8px; border: 1px solid #eee; }
+
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th { background: #0d6efd; color: #fff; padding: 8px; font-size: 13px; border: 1px solid #0d6efd; }
+    td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 13px; }
+    .bold-text { font-weight: bold; }
+
+    .summary { display: flex; justify-content: space-between; gap: 10px; }
+    .summary div { flex: 1; border: 1px solid #0d6efd; padding: 10px; text-align: center; }
+    .summary h4 { margin: 0; font-size: 12px; color: #333; }
+    .summary p { margin: 5px 0 0; font-size: 18px; font-weight: bold; color: #000; }
+
+    .footer { display: flex; justify-content: space-between; margin-top: 60px; }
+    .footer span { border-top: 1px solid #000; padding-top: 5px; width: 120px; text-align: center; font-size: 12px; font-weight: bold; }
+
+    @media print {
+        @page { size: auto; margin: 10mm; }
+        body { background: #fff; padding: 0; }
+        .controls, .print-btn-hidden { display: none !important; }
+        .marksheet { 
+            display: block !important; 
+            border: 2px solid #000; 
+            width: 100%; 
+            max-width: 100%;
+            margin: 0;
+            padding: 20px;
+        }
+        th { background: #f0f0f0 !important; color: #000 !important; border: 1px solid #000; }
+        td { border: 1px solid #000; }
+        .summary div { border: 1px solid #000; }
+        .header h2 { color: #000; }
+    }
+</style>
+</head>
+<body>
+
+<div class="controls">
+    <h3>Result Search</h3>
+    <input id="rollInput" type="number" placeholder="Enter Roll">
+    <button onclick="search()">Search</button>
+</div>
+
+<div id="marksheetBox" class="marksheet">
+    <div style="text-align: right; margin-bottom: 10px;">
+        <button class="print-btn-hidden" onclick="window.print()" style="background: #198754; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Print Marksheet</button>
+    </div>
+
+    <div class="header">
+        <h2>SHERKHALI GOVT. WOMEN'S COLLEGE</h2>
+        <p>HUMANITIES GROUP - PRE-TEST EXAM-2025</p>
+        <p>Academic Transcript</p>
+    </div>
+
+    <div class="info">
+        <div><b>Name:</b> <span id="sName"></span></div>
+        <div><b>Roll:</b> <span id="sRoll"></span></div>
+        <div><b>Group:</b> <span id="sGroup"></span></div>
+        <div><b>Status:</b> <span id="sStatus"></span></div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>MCQ</th>
+                <th>CQ</th>
+                <th>Prac</th>
+                <th>Total</th>
+                <th>GP</th>
+                <th>Grade</th>
+            </tr>
+        </thead>
+        <tbody id="subjectBody"></tbody>
+    </table>
+
+    <div class="summary">
+        <div><h4>Total Marks</h4><p id="sTotal"></p></div>
+        <div><h4>GPA</h4><p id="sGPA"></p></div>
+        <div><h4>Failed Sub</h4><p id="sFail"></p></div>
+    </div>
+
+    <div class="footer">
+        <span>Guide Teacher</span>
+        <span>Principal</span>
+    </div>
+</div>
+
+<script>
+    const studentData = [
+       {
+    "merit": 1,
+    "name": "TANNI KHATUN",
+    "roll": "51",
+    "group": "Science",
+    "total_score": "813",
+    "gpa": "A- (3.5)",
+    "failed_count": 0,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "15", "cq": "30 + 54", "p": "", "t": "99", "gp": "2", "g": "C"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "48 + 46", "p": "", "t": "94", "gp": "2", "g": "C"},
+      {"n": "Physics 1st & Physics 2nd", "m": "9 + 18", "cq": "45 + 30", "p": "25 + 23", "t": "150", "gp": "4", "g": "A"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "20 + 17", "cq": "35 + 44", "p": "20 + 20", "t": "156", "gp": "4", "g": "A"},
+      {"n": "Biology 1st & Biology 2nd", "m": "17 + 14", "cq": "33 + 32", "p": "24 + 23", "t": "143", "gp": "4", "g": "A"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "14 + 8", "cq": "17 + 15", "p": "20 + 15", "t": "89", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "16", "cq": "41", "p": "25", "t": "82", "gp": "5", "g": "A+"}
+    ]
+  },
+  {
+    "merit": 2,
+    "name": "LABIBA BINTE ROUF",
+    "roll": "244",
+    "group": "Science",
+    "total_score": "699",
+    "gpa": "B (3.33)",
+    "failed_count": 0,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "14", "cq": "40 + 46", "p": "", "t": "100", "gp": "3", "g": "B"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "67 + 72", "p": "", "t": "139", "gp": "3.5", "g": "A-"},
+      {"n": "Physics 1st & Physics 2nd", "m": "10 + 9", "cq": "31 + 22", "p": "23 + 20", "t": "115", "gp": "3", "g": "B"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "9 + 12", "cq": "34 + 30", "p": "20 + 20", "t": "125", "gp": "3.5", "g": "A-"},
+      {"n": "Biology 1st & Biology 2nd", "m": "10 + 9", "cq": "19 + 30", "p": "20 + 23", "t": "111", "gp": "3", "g": "B"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "8 + 5", "cq": "5 + 4", "p": "8 + 9", "t": "39", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "15", "cq": "33", "p": "22", "t": "70", "gp": "4", "g": "A"}
+    ]
+  },
+  {
+    "merit": 3,
+    "name": "MST. BITHI KHATUN",
+    "roll": "52",
+    "group": "Science",
+    "total_score": "728",
+    "gpa": "F (0.0)",
+    "failed_count": 2,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "11", "cq": "24 + 53", "p": "", "t": "88", "gp": "2", "g": "C"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "55 + 46", "p": "", "t": "101", "gp": "3", "g": "B"},
+      {"n": "Physics 1st & Physics 2nd", "m": "15", "cq": "23", "p": "20", "t": "58", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "14 + 8", "cq": "40 + 47", "p": "20 + 20", "t": "149", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "13 + 11", "cq": "38 + 28", "p": "24 + 23", "t": "137", "gp": "3.5", "g": "A-"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "29 + 9", "cq": "12 + 48", "p": "20 + 20", "t": "138", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "11", "cq": "26", "p": "20", "t": "57", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 4,
+    "name": "MST. SUBORNA KHATUN",
+    "roll": "230",
+    "group": "Science",
+    "total_score": "716",
+    "gpa": "F (0.0)",
+    "failed_count": 1,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "11", "cq": "25 + 57", "p": "", "t": "93", "gp": "2", "g": "C"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "55 + 43", "p": "", "t": "98", "gp": "2", "g": "C"},
+      {"n": "Physics 1st & Physics 2nd", "m": "8 + 9", "cq": "7 + 8", "p": "15 + 15", "t": "62", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "20 + 22", "cq": "23 + 21", "p": "20 + 20", "t": "126", "gp": "3.5", "g": "A-"},
+      {"n": "Biology 1st & Biology 2nd", "m": "11 + 10", "cq": "26 + 36", "p": "22 + 24", "t": "129", "gp": "3.5", "g": "A-"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "35 + 35", "cq": "10 + 11", "p": "22 + 22", "t": "135", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "14", "cq": "36", "p": "23", "t": "73", "gp": "4", "g": "A"}
+    ]
+  },
+  {
+    "merit": 5,
+    "name": "JANNATUL FERDUS URMI",
+    "roll": "268",
+    "group": "Science",
+    "total_score": "689",
+    "gpa": "F (0.0)",
+    "failed_count": 2,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "12", "cq": "31", "p": "", "t": "43", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "60 + 54", "p": "", "t": "114", "gp": "3", "g": "B"},
+      {"n": "Physics 1st & Physics 2nd", "m": "10 + 13", "cq": "32 + 17", "p": "23 + 17", "t": "112", "gp": "3", "g": "B"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "6 + 8", "cq": "32 + 21", "p": "20 + 20", "t": "107", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "11 + 12", "cq": "28 + 21", "p": "20 + 20", "t": "112", "gp": "3", "g": "B"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "20 + 39", "cq": "10 + 13", "p": "20 + 25", "t": "127", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "9", "cq": "40", "p": "25", "t": "74", "gp": "4", "g": "A"}
+    ]
+  },
+  {
+    "merit": 6,
+    "name": "MST. ETI KHATUN",
+    "roll": "12",
+    "group": "Science",
+    "total_score": "676",
+    "gpa": "F (0.0)",
+    "failed_count": 2,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "12", "cq": "16 + 62", "p": "", "t": "90", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "62 + 33", "p": "", "t": "95", "gp": "2", "g": "C"},
+      {"n": "Physics 1st & Physics 2nd", "m": "19 + 14", "cq": "11 + 17", "p": "15 + 18", "t": "94", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "16 + 11", "cq": "17 + 35", "p": "20 + 20", "t": "119", "gp": "3", "g": "B"},
+      {"n": "Biology 1st & Biology 2nd", "m": "17 + 10", "cq": "17 + 19", "p": "20 + 20", "t": "103", "gp": "3", "g": "B"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "21 + 22", "cq": "17 + 20", "p": "20 + 20", "t": "120", "gp": "3.5", "g": "A-"},
+      {"n": "ICT", "m": "15", "cq": "22", "p": "18", "t": "55", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 7,
+    "name": "MST. TAMANNA KHATUN",
+    "roll": "44",
+    "group": "Science",
+    "total_score": "660",
+    "gpa": "F (0.0)",
+    "failed_count": 1,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "15", "cq": "24 + 41", "p": "", "t": "80", "gp": "2", "g": "C"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "48 + 18", "p": "", "t": "66", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "10 + 16", "cq": "17 + 20", "p": "15 + 20", "t": "98", "gp": "2", "g": "C"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "10 + 9", "cq": "30 + 41", "p": "20 + 20", "t": "130", "gp": "3.5", "g": "A-"},
+      {"n": "Biology 1st & Biology 2nd", "m": "15 + 9", "cq": "26 + 22", "p": "24 + 22", "t": "118", "gp": "3", "g": "B"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "20 + 28", "cq": "14 + 9", "p": "20 + 20", "t": "111", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "12", "cq": "25", "p": "20", "t": "57", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 8,
+    "name": "MST. SHAMIMA KHATUN",
+    "roll": "210",
+    "group": "Science",
+    "total_score": "650",
+    "gpa": "F (0.0)",
+    "failed_count": 3,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "18", "cq": "24 + 40", "p": "", "t": "82", "gp": "2", "g": "C"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "42 + 25", "p": "", "t": "67", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "8", "cq": "3", "p": "15", "t": "26", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "6 + 9", "cq": "25 + 21", "p": "20 + 20", "t": "101", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "13 + 10", "cq": "20 + 21", "p": "21 + 20", "t": "105", "gp": "3", "g": "B"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "31 + 20", "cq": "15 + 6", "p": "20 + 20", "t": "112", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "14", "cq": "18", "p": "125", "t": "157", "gp": "5", "g": "A+"}
+    ]
+  },
+  {
+    "merit": 9,
+    "name": "MST. SATHI KHATUN",
+    "roll": "107",
+    "group": "Science",
+    "total_score": "641",
+    "gpa": "F (0.0)",
+    "failed_count": 1,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "19", "cq": "28 + 53", "p": "", "t": "100", "gp": "3", "g": "B"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "44 + 36", "p": "", "t": "80", "gp": "2", "g": "C"},
+      {"n": "Physics 1st & Physics 2nd", "m": "11 + 11", "cq": "17 + 17", "p": "18 + 17", "t": "91", "gp": "2", "g": "C"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "17 + 21", "cq": "21 + 27", "p": "20 + 20", "t": "126", "gp": "3.5", "g": "A-"},
+      {"n": "Biology 1st & Biology 2nd", "m": "13 + 9", "cq": "11 + 18", "p": "15 + 20", "t": "86", "gp": "0", "g": "F"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "19 + 17", "cq": "18 + 10", "p": "20 + 20", "t": "104", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "18", "cq": "19", "p": "17", "t": "54", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 10,
+    "name": "MST. RABEYA KHATUN",
+    "roll": "153",
+    "group": "Science",
+    "total_score": "633",
+    "gpa": "F (0.0)",
+    "failed_count": 1,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "18", "cq": "42 + 58", "p": "", "t": "118", "gp": "3", "g": "B"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "35 + 33", "p": "", "t": "68", "gp": "1", "g": "D"},
+      {"n": "Physics 1st & Physics 2nd", "m": "15 + 12", "cq": "19 + 18", "p": "20 + 18", "t": "102", "gp": "3", "g": "B"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "10 + 8", "cq": "44 + 43", "p": "20 + 20", "t": "145", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "13 + 9", "cq": "20 + 17", "p": "23 + 21", "t": "103", "gp": "3", "g": "B"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "10 + 7", "cq": "2 + 3", "p": "8 + 9", "t": "39", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "14", "cq": "24", "p": "20", "t": "58", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 11,
+    "name": "MST. SIMA KHATUN",
+    "roll": "43",
+    "group": "Science",
+    "total_score": "632",
+    "gpa": "F (0.0)",
+    "failed_count": 4,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "11", "cq": "20 + 38", "p": "", "t": "69", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "52 + 20", "p": "", "t": "72", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "8 + 11", "cq": "12 + 18", "p": "15 + 18", "t": "82", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "9 + 8", "cq": "28 + 17", "p": "20 + 20", "t": "102", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "10 + 9", "cq": "21 + 17", "p": "21 + 20", "t": "98", "gp": "2", "g": "C"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "24 + 38", "cq": "13 + 19", "p": "20 + 23", "t": "137", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "12", "cq": "37", "p": "23", "t": "72", "gp": "4", "g": "A"}
+    ]
+  },
+  {
+    "merit": 12,
+    "name": "EASMIN KHATUN",
+    "roll": "252",
+    "group": "Science",
+    "total_score": "631",
+    "gpa": "F (0.0)",
+    "failed_count": 2,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "14", "cq": "30", "p": "", "t": "44", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "53 + 33", "p": "", "t": "86", "gp": "2", "g": "C"},
+      {"n": "Physics 1st & Physics 2nd", "m": "9 + 11", "cq": "17 + 18", "p": "18 + 18", "t": "91", "gp": "2", "g": "C"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "6 + 8", "cq": "17 + 26", "p": "20 + 20", "t": "97", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "12 + 12", "cq": "24 + 35", "p": "22 + 24", "t": "129", "gp": "3.5", "g": "A-"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "24 + 39", "cq": "10 + 13", "p": "20 + 25", "t": "131", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "11", "cq": "22", "p": "20", "t": "53", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 13,
+    "name": "MST. SANJIDA KHATUN",
+    "roll": "269",
+    "group": "Science",
+    "total_score": "625",
+    "gpa": "F (0.0)",
+    "failed_count": 3,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "16", "cq": "41", "p": "", "t": "57", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "62 + 48", "p": "", "t": "110", "gp": "3", "g": "B"},
+      {"n": "Physics 1st & Physics 2nd", "m": "9 + 11", "cq": "18 + 14", "p": "20 + 15", "t": "87", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "6 + 10", "cq": "30 + 33", "p": "20 + 20", "t": "119", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "13 + 13", "cq": "38 + 36", "p": "24 + 25", "t": "149", "gp": "4", "g": "A"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "9 + 6", "cq": "2 + 14", "p": "8 + 9", "t": "48", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "9", "cq": "26", "p": "20", "t": "55", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 14,
+    "name": "AKHI BINTE ALOMGIR",
+    "roll": "259",
+    "group": "Science",
+    "total_score": "620",
+    "gpa": "F (0.0)",
+    "failed_count": 2,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "10", "cq": "28", "p": "", "t": "38", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "52", "p": "", "t": "52", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "11 + 11", "cq": "33 + 23", "p": "20 + 22", "t": "120", "gp": "3.5", "g": "A-"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "9 + 18", "cq": "37 + 22", "p": "20 + 20", "t": "126", "gp": "3.5", "g": "A-"},
+      {"n": "Biology 1st & Biology 2nd", "m": "19 + 9", "cq": "17 + 31", "p": "19 + 22", "t": "117", "gp": "3", "g": "B"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "21 + 25", "cq": "10 + 12", "p": "20 + 20", "t": "108", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "13", "cq": "26", "p": "20", "t": "59", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 15,
+    "name": "MST. SIYAM AKTER",
+    "roll": "226",
+    "group": "Science",
+    "total_score": "602",
+    "gpa": "F (0.0)",
+    "failed_count": 4,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "8", "cq": "20 + 36", "p": "", "t": "64", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "48 + 33", "p": "", "t": "81", "gp": "2", "g": "C"},
+      {"n": "Physics 1st & Physics 2nd", "m": "8 + 13", "cq": "2 + 3", "p": "15 + 15", "t": "56", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "12 + 17", "cq": "18 + 12", "p": "20 + 20", "t": "99", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "12 + 9", "cq": "11 + 26", "p": "15 + 23", "t": "96", "gp": "0", "g": "F"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "38 + 36", "cq": "22 + 24", "p": "22 + 20", "t": "162", "gp": "5", "g": "A+"},
+      {"n": "ICT", "m": "11", "cq": "18", "p": "15", "t": "44", "gp": "2", "g": "C"}
+    ]
+  },
+  {
+    "merit": 16,
+    "name": "MST. YESMIN KHATUN",
+    "roll": "175",
+    "group": "Science",
+    "total_score": "601",
+    "gpa": "F (0.0)",
+    "failed_count": 2,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "21", "cq": "25 + 34", "p": "", "t": "80", "gp": "2", "g": "C"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "37 + 33", "p": "", "t": "70", "gp": "1", "g": "D"},
+      {"n": "Physics 1st & Physics 2nd", "m": "9 + 10", "cq": "1 + 5", "p": "15 + 15", "t": "55", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "8 + 9", "cq": "34 + 32", "p": "20 + 20", "t": "123", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "9 + 13", "cq": "22 + 17", "p": "20 + 20", "t": "101", "gp": "3", "g": "B"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "24 + 27", "cq": "13 + 10", "p": "20 + 20", "t": "114", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "10", "cq": "27", "p": "21", "t": "58", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 17,
+    "name": "MST. CAMELIA AKTER",
+    "roll": "138",
+    "group": "Science",
+    "total_score": "584",
+    "gpa": "F (0.0)",
+    "failed_count": 3,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "11", "cq": "25 + 50", "p": "", "t": "86", "gp": "2", "g": "C"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "26 + 16", "p": "", "t": "42", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "8 + 12", "cq": "10 + 3", "p": "15 + 15", "t": "63", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "10 + 8", "cq": "40 + 43", "p": "20 + 20", "t": "141", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "11 + 9", "cq": "30 + 42", "p": "22 + 22", "t": "136", "gp": "3.5", "g": "A-"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "5 + 6", "cq": "2 + 23", "p": "8 + 15", "t": "59", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "9", "cq": "28", "p": "20", "t": "57", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 18,
+    "name": "MORIOM KHATUN",
+    "roll": "213",
+    "group": "Science",
+    "total_score": "564",
+    "gpa": "F (0.0)",
+    "failed_count": 5,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "12", "cq": "18 + 57", "p": "", "t": "87", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "50 + 24", "p": "", "t": "74", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "10 + 8", "cq": "2 + 3", "p": "15 + 15", "t": "53", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "6 + 13", "cq": "36 + 37", "p": "20 + 20", "t": "132", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "13 + 10", "cq": "13 + 19", "p": "18 + 21", "t": "94", "gp": "0", "g": "F"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "10 + 5", "cq": "6 + 28", "p": "8 + 9", "t": "66", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "13", "cq": "25", "p": "20", "t": "58", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 19,
+    "name": "FATEMA TUS JOHORA URMI",
+    "roll": "197",
+    "group": "Science",
+    "total_score": "548",
+    "gpa": "F (0.0)",
+    "failed_count": 2,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "16", "cq": "24 + 53", "p": "", "t": "93", "gp": "2", "g": "C"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "50 + 35", "p": "", "t": "85", "gp": "2", "g": "C"},
+      {"n": "Physics 1st & Physics 2nd", "m": "9 + 9", "cq": "13 + 1", "p": "15 + 15", "t": "62", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "15 + 11", "cq": "21 + 13", "p": "20 + 20", "t": "100", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "9 + 12", "cq": "28 + 21", "p": "20 + 20", "t": "110", "gp": "3", "g": "B"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "10 + 7", "cq": "2 + 1", "p": "8 + 9", "t": "37", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "14", "cq": "26", "p": "21", "t": "61", "gp": "3.5", "g": "A-"}
+    ]
+  },
+  {
+    "merit": 20,
+    "name": "MST. ANJUMAN KHATUN",
+    "roll": "229",
+    "group": "Science",
+    "total_score": "521",
+    "gpa": "F (0.0)",
+    "failed_count": 5,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "11", "cq": "25 + 47", "p": "", "t": "83", "gp": "2", "g": "C"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "29 + 24", "p": "", "t": "53", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "8 + 8", "cq": "2 + 2", "p": "15 + 15", "t": "50", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "13 + 22", "cq": "11 + 14", "p": "20 + 20", "t": "100", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "12 + 26", "cq": "17 + 9", "p": "19 + 23", "t": "106", "gp": "0", "g": "F"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "18 + 17", "cq": "9 + 10", "p": "20 + 20", "t": "94", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "8", "cq": "12", "p": "15", "t": "35", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "merit": 21,
+    "name": "MST. FARJANA KHATUN",
+    "roll": "90",
+    "group": "Science",
+    "total_score": "515",
+    "gpa": "F (0.0)",
+    "failed_count": 3,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "19", "cq": "24 + 38", "p": "", "t": "81", "gp": "2", "g": "C"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "50 + 37", "p": "", "t": "87", "gp": "2", "g": "C"},
+      {"n": "Physics 1st & Physics 2nd", "m": "8 + 12", "cq": "1 + 0", "p": "15 + 15", "t": "51", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "12 + 8", "cq": "22 + 21", "p": "20 + 20", "t": "103", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "13 + 9", "cq": "13 + 22", "p": "16 + 22", "t": "95", "gp": "0", "g": "F"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "8 + 6", "cq": "9 + 0", "p": "8 + 9", "t": "40", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "10", "cq": "28", "p": "20", "t": "58", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 22,
+    "name": "MST. SUMAIYA KHATUN",
+    "roll": "13",
+    "group": "Science",
+    "total_score": "514",
+    "gpa": "F (0.0)",
+    "failed_count": 5,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "19", "cq": "18 + 29", "p": "", "t": "66", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "44 + 14", "p": "", "t": "58", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "8 + 6", "cq": "3 + 5", "p": "15 + 15", "t": "52", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "14 + 7", "cq": "26 + 18", "p": "20 + 20", "t": "105", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "11 + 10", "cq": "3 + 5", "p": "15 + 15", "t": "59", "gp": "0", "g": "F"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "23 + 22", "cq": "14 + 22", "p": "20 + 23", "t": "124", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "11", "cq": "21", "p": "18", "t": "50", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 23,
+    "name": "MST. AYSHA SIDDIKA BRISTY",
+    "roll": "207",
+    "group": "Science",
+    "total_score": "502",
+    "gpa": "F (0.0)",
+    "failed_count": 3,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "7", "cq": "28 + 48", "p": "", "t": "83", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "50 + 41", "p": "", "t": "91", "gp": "2", "g": "C"},
+      {"n": "Physics 1st & Physics 2nd", "m": "6 + 8", "cq": "6 + 0", "p": "15 + 15", "t": "50", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "11 + 5", "cq": "32 + 13", "p": "20 + 20", "t": "101", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "13 + 9", "cq": "18 + 23", "p": "22 + 22", "t": "107", "gp": "3", "g": "B"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "6 + 3", "cq": "0 + 0", "p": "8 + 9", "t": "26", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "12", "cq": "17", "p": "15", "t": "44", "gp": "2", "g": "C"}
+    ]
+  },
+  {
+    "merit": 24,
+    "name": "MST. MIM KHATUN",
+    "roll": "250",
+    "group": "Science",
+    "total_score": "450",
+    "gpa": "F (0.0)",
+    "failed_count": 5,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "12", "cq": "28", "p": "", "t": "40", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "54 + 22", "p": "", "t": "76", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "11 + 9", "cq": "6 + 2", "p": "15 + 15", "t": "58", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "7 + 10", "cq": "10 + 8", "p": "20 + 20", "t": "75", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "9 + 12", "cq": "13 + 31", "p": "20 + 23", "t": "108", "gp": "0", "g": "F"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "8 + 8", "cq": "1 + 2", "p": "8 + 9", "t": "36", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "12", "cq": "25", "p": "20", "t": "57", "gp": "3", "g": "B"}
+    ]
+  },
+  {
+    "merit": 25,
+    "name": "MST. NUSRAT JAHAN",
+    "roll": "130",
+    "group": "Science",
+    "total_score": "442",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "15", "cq": "19 + 29", "p": "", "t": "63", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "19 + 23", "p": "", "t": "42", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "3 + 8", "cq": "1 + 3", "p": "15 + 15", "t": "45", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "6 + 2", "cq": "17 + 6", "p": "20 + 20", "t": "71", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "11 + 9", "cq": "7 + 5", "p": "16 + 16", "t": "64", "gp": "0", "g": "F"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "20 + 31", "cq": "9 + 13", "p": "20 + 22", "t": "115", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "13", "cq": "14", "p": "15", "t": "42", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "merit": 26,
+    "name": "MST. MUKTA KHATUN",
+    "roll": "281",
+    "group": "Science",
+    "total_score": "422",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "12", "cq": "26", "p": "", "t": "38", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "33 + 22", "p": "", "t": "55", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "4 + 8", "cq": "2 + 0", "p": "15 + 15", "t": "44", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "10 + 5", "cq": "12 + 2", "p": "20 + 20", "t": "69", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "10 + 9", "cq": "11 + 23", "p": "18 + 22", "t": "93", "gp": "0", "g": "F"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "6 + 31", "cq": "6 + 9", "p": "20 + 20", "t": "92", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "6", "cq": "10", "p": "15", "t": "31", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "merit": 27,
+    "name": "MST. RAZIA KHATUN",
+    "roll": "88",
+    "group": "Science",
+    "total_score": "412",
+    "gpa": "F (0.0)",
+    "failed_count": 5,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "9", "cq": "20 + 42", "p": "", "t": "71", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "30 + 33", "p": "", "t": "63", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "8 + 11", "cq": "9 + 7", "p": "15 + 15", "t": "65", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "3 + 10", "cq": "18 + 19", "p": "20 + 20", "t": "90", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "10", "cq": "12", "p": "16", "t": "38", "gp": "0", "g": "F"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "7 + 5", "cq": "1 + 12", "p": "8 + 9", "t": "42", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "9", "cq": "19", "p": "15", "t": "43", "gp": "2", "g": "C"}
+    ]
+  },
+  {
+    "merit": 28,
+    "name": "MST. TAHMINA ISLAM ETI",
+    "roll": "24",
+    "group": "Science",
+    "total_score": "410",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "13", "cq": "13 + 54", "p": "", "t": "80", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "40 + 15", "p": "", "t": "55", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "5 + 8", "cq": "1 + 0", "p": "15 + 15", "t": "44", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "8 + 6", "cq": "12 + 23", "p": "20 + 20", "t": "89", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "11 + 10", "cq": "11 + 9", "p": "18 + 16", "t": "75", "gp": "0", "g": "F"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "10 + 4", "cq": "0 + 0", "p": "8 + 9", "t": "31", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "11", "cq": "10", "p": "15", "t": "36", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "merit": 29,
+    "name": "MST. ISRAT JAHAN EMU",
+    "roll": "87",
+    "group": "Science",
+    "total_score": "409",
+    "gpa": "F (0.0)",
+    "failed_count": 5,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "17", "cq": "24 + 33", "p": "", "t": "74", "gp": "1", "g": "D"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "25 + 22", "p": "", "t": "47", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "3 + 8", "cq": "1 + 0", "p": "15 + 15", "t": "42", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "8 + 11", "cq": "5 + 2", "p": "20 + 20", "t": "66", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "10 + 11", "cq": "3 + 2", "p": "15 + 14", "t": "55", "gp": "0", "g": "F"},
+      {"n": "Statistics 1st & Statistics 2nd", "m": "18 + 13", "cq": "12 + 6", "p": "20 + 20", "t": "89", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "8", "cq": "13", "p": "15", "t": "36", "gp": "0", "g": "F"}
+    ]
+  },
+  {
+    "merit": 30,
+    "name": "MST. ROKEYA KAHTUN",
+    "roll": "106",
+    "group": "Science",
+    "total_score": "192",
+    "gpa": "F (0.0)",
+    "failed_count": 5,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "10", "cq": "10 + 23", "p": "", "t": "43", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "26 + 33", "p": "", "t": "59", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "0", "cq": "0", "p": "0", "t": "0", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "13", "cq": "13", "p": "16", "t": "42", "gp": "0", "g": "F"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "9", "cq": "21", "p": "18", "t": "48", "gp": "2", "g": "C"}
+    ]
+  },
+  {
+    "merit": 31,
+    "name": "MST. KONEKA KHATUN",
+    "roll": "185",
+    "group": "Science",
+    "total_score": "67",
+    "gpa": "F (0.0)",
+    "failed_count": 6,
+    "subjects": [
+      {"n": "Bangla 1st & Bangla 2nd", "m": "10", "cq": "24", "p": "", "t": "34", "gp": "0", "g": "F"},
+      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "33", "p": "", "t": "33", "gp": "0", "g": "F"},
+      {"n": "Physics 1st & Physics 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"n": "Chemistry 1st & Chemistry 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"n": "Biology 1st & Biology 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"n": "Higher Math 1st & Higher Math 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
+      {"n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
+    ]
+  }
+
+  ];
+
+    function search() {
+        const roll = document.getElementById('rollInput').value;
+        const student = studentData.find(s => s.roll === roll);
+        const marksheet = document.getElementById('marksheetBox');
+
+        if (student) {
+            marksheet.style.display = "block";
+            document.getElementById('sName').innerText = student.name;
+            document.getElementById('sRoll').innerText = student.roll;
+            document.getElementById('sGroup').innerText = student.group || "Humanities";
+            
+            const status = student.failed_count === 0 ? "PASSED" : "FAILED (" + student.failed_count + ")";
+            document.getElementById('sStatus').innerText = status;
+            document.getElementById('sStatus').style.color = student.failed_count === 0 ? "green" : "red";
+            
+            const tbody = document.getElementById('subjectBody');
+            tbody.innerHTML = "";
+            student.subjects.forEach(sub => {
+                tbody.innerHTML += `<tr>
+                    <td style="text-align:left">${sub.n}</td>
+                    <td>${sub.m || '-'}</td>
+                    <td>${sub.cq || '-'}</td>
+                    <td>${sub.p || '-'}</td>
+                    <td class="bold-text">${sub.t}</td>
+                    <td>${sub.gp}</td>
+                    <td class="bold-text" style="color:${sub.g === 'F' ? 'red' : 'black'}">${sub.g}</td>
+                </tr>`;
+            });
+
+            document.getElementById('sTotal').innerText = student.total_score;
+            document.getElementById('sGPA').innerText = student.gpa;
+            document.getElementById('sFail').innerText = student.failed_count;
+        } else {
+            alert("Roll number not found!");
+            marksheet.style.display = "none";
+        }
+    }
+</script>
+</body>
+</html>
