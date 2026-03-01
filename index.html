@@ -20,7 +20,6 @@
         }
         .header-top h2 { color: #0d6efd; margin: 0; font-size: 1.2rem; }
         
-        /* স্কুলের নাম দেখানোর জন্য ব্যাজ */
         .active-school-badge {
             background: #0d6efd; color: white;
             padding: 8px 20px; border-radius: 20px;
@@ -75,14 +74,12 @@
             border-radius: 8px; margin-bottom: 15px;
         }
         
-        /* সেটিংস এর ভেতরে স্কুল ম্যানেজমেন্ট */
         .school-management {
             background: #f0f7ff; padding: 20px; border-radius: 8px;
             margin-bottom: 20px; border: 2px solid #0d6efd;
         }
         .school-management h4 { margin-bottom: 15px; color: #0d6efd; border-bottom: 1px solid #b3d7ff; padding-bottom: 10px; }
         
-        /* লিস্ট স্টাইল */
         .school-list-admin {
             max-height: 200px; overflow-y: auto;
             border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px;
@@ -165,7 +162,6 @@
     <div class="header-top">
         <h2>📄 নির্বাচনী পরীক্ষার মার্কসিট-২০২৬</h2>
         <div style="display: flex; align-items: center; gap: 15px;">
-            <!-- ইউজার শুধু নাম দেখবে, কোনো ড্রপডাউন নেই -->
             <span id="currentSchoolLabel" class="active-school-badge">লোড হচ্ছে...</span>
             <button class="settings-btn" onclick="toggleAdmin()">⚙️</button>
         </div>
@@ -184,7 +180,6 @@
         </div>
     </div>
 
-    <!-- অ্যাডমিন প্যানেল -->
     <div id="adminPanel" class="admin-panel">
         <div id="loginSection">
             <div class="login-box">
@@ -197,20 +192,16 @@
         
         <div id="uploadSection" style="display: none;">
             
-            <!-- স্কুল ম্যানেজমেন্ট (শুধু এখানেই স্কুলের তালিকা থাকবে) -->
             <div class="school-management">
                 <h4>🏫 প্রতিষ্ঠান পরিচালনা (শুধুমাত্র অ্যাডমিনের জন্য)</h4>
                 <p style="font-size:13px; color:#666; margin-bottom:10px;">
-                    নিচের তালিকা থেকে একটি প্রতিষ্ঠান 'সক্রিয়' করুন। সক্রিয় করলে ওয়েবসাইটের লিংক পরিবর্তন হবে এবং ইউজাররা শুধু সেই প্রতিষ্ঠানটিই দেখতে পাবে।
+                    নিচের তালিকা থেকে একটি প্রতিষ্ঠান 'সক্রিয়' করুন। সক্রিয় করলে ওয়েবসাইটের লিংক পরিবর্তন হবে এবং রেজাল্ট সীটে এই নামটি দেখাবে।
                 </p>
                 
-                <!-- স্কুলের তালিকা -->
                 <div id="schoolListAdmin" class="school-list-admin">
-                    <!-- জেএস দিয়ে এখানে আইটেম আসবে -->
                     <p style="padding:10px; text-align:center; color:#999;">লোড হচ্ছে...</p>
                 </div>
                 
-                <!-- নতুন স্কুল যোগ -->
                 <div style="border-top: 1px dashed #ccc; padding-top: 15px;">
                     <label><b>নতুন প্রতিষ্ঠান যোগ:</b></label>
                     <div class="add-school-box">
@@ -264,9 +255,10 @@
         </div>
         
         <div class="header">
-            <h1 style="color: #4169e1;"></h1>
+            <!-- এখানে ID যোগ করা হয়েছে যাতে জাভাস্ক্রিপ্ট দিয়ে নাম পরিবর্তন করা যায় -->
+            <h1 id="displaySchoolNameHeader" style="color: #4169e1;">SCHOOL NAME</h1>
             <h4 style="color: #27ae60;">।। শাহজাদপুর, সিরাজগঞ্জ ।।</h4>
-            <h5 style="color: #27ae60;"></h5>
+            <h5 style="color: #27ae60;">www.swdc.edu.bd</h5>
             <h3>-----------------------------------------------------</h3>
             <h4 style="color: #4169e1;">নির্বাচনী পরীক্ষা-২০২৬ এর একাডেমিক ট্রান্সক্রিপ্ট</h4>
             <div id="groupBadge" class="group-badge humanities">মানবিক</div>
@@ -321,45 +313,30 @@
     let currentSchoolId = null;
     let currentSchoolName = "";
 
-    // ================= CORE LOGIC =================
+    window.onload = function() { initApp(); };
 
-    window.onload = function() {
-        initApp();
-    };
-
-    // অ্যাপ ইনিশিয়ালাইজেশন
     async function initApp() {
-        // ১. URL থেকে স্কুল আইডি চেক করা
         const params = new URLSearchParams(window.location.search);
         const schoolIdFromUrl = params.get('school');
-
-        // ২. অ্যাডমিনের জন্য স্কুলের লিস্ট লোড করা
         await loadSchoolsListForAdmin();
-
-        // ৩. স্কুল সেট করা (URL থেকে বা ডিফল্ট)
+        
         if (schoolIdFromUrl) {
-            // URL তে আইডি থাকলে সেটা লোড করবে
             await setActiveSchool(schoolIdFromUrl);
         } else {
-            // URL এ আইডি না থাকলে ডাটাবেস চেক করবে কোনো ডিফল্ট সেট আছে কিনা (অপশনাল)
-            // অথবা ম্যানুয়ালি সেট করতে বলবে
             document.getElementById('currentSchoolLabel').innerText = "প্রতিষ্ঠান নির্বাচন করুন";
             document.getElementById('currentSchoolLabel').style.background = "#6c757d";
+            // ডিফল্ট হিসেবে মার্কশিটে স্কুল নাম খালি বা ডিফল্ট থাকতে পারে
+            document.getElementById('displaySchoolNameHeader').innerText = "প্রতিষ্ঠানের নাম";
         }
     }
 
-    // URL আপডেট করার ফাংশন
     function updateBrowserUrl(id) {
         const url = new URL(window.location);
-        if (id) {
-            url.searchParams.set('school', id);
-        } else {
-            url.searchParams.delete('school');
-        }
+        if (id) url.searchParams.set('school', id);
+        else url.searchParams.delete('school');
         window.history.pushState({}, '', url);
     }
 
-    // নির্দিষ্ট স্কুলকে সক্রিয় করার ফাংশন (অ্যাডমিন লিস্ট থেকে ক্লিক করলে বা URL থেকে)
     async function setActiveSchool(id) {
         try {
             const doc = await schoolsRef.doc(id).get();
@@ -367,17 +344,15 @@
                 currentSchoolId = id;
                 currentSchoolName = doc.data().name;
                 
-                // UI আপডেট
+                // UI আপডেট: টপ বার
                 document.getElementById('currentSchoolLabel').innerText = currentSchoolName;
                 document.getElementById('currentSchoolLabel').style.background = "#0d6efd";
                 
-                // অ্যাডমিন প্যানেলের লিস্টে হাইলাইট
+                // **নতুন যোগ: মার্কশিটের হেডারে স্কুলের নাম দেখানো হচ্ছে**
+                document.getElementById('displaySchoolNameHeader').innerText = currentSchoolName;
+                
                 highlightActiveInAdmin(id);
-                
-                // ডাটা লোড
                 await loadStudentsForSchool(id);
-                
-                // URL আপডেট
                 updateBrowserUrl(id);
             } else {
                 alert("প্রতিষ্ঠানটি খুঁজে পাওয়া যায়নি।");
@@ -387,7 +362,6 @@
         }
     }
 
-    // অ্যাডমিন প্যানেলের লিস্টে সক্রিয় স্কুল হাইলাইট করা
     function highlightActiveInAdmin(id) {
         const rows = document.querySelectorAll('.school-item-row');
         rows.forEach(row => {
@@ -404,7 +378,6 @@
         });
     }
 
-    // অ্যাডমিনের জন্য স্কুলের তালিকা তৈরি করা
     async function loadSchoolsListForAdmin() {
         const listContainer = document.getElementById('schoolListAdmin');
         listContainer.innerHTML = '';
@@ -432,7 +405,6 @@
         }
     }
 
-    // নতুন স্কুল যোগ
     async function addNewSchool() {
         const input = document.getElementById('newSchoolName');
         const name = input.value.trim();
@@ -442,19 +414,13 @@
             const docRef = await schoolsRef.add({ name: name });
             alert("✅ প্রতিষ্ঠান যোগ হয়েছে");
             input.value = '';
-            
-            // লিস্ট রিফ্রেশ
             await loadSchoolsListForAdmin();
-            
-            // নতুন স্কুলটি অটো সক্রিয় করে দেয়া
             await setActiveSchool(docRef.id);
-            
         } catch (error) {
             alert("এরর: " + error.message);
         }
     }
 
-    // স্টুডেন্ট ডাটা লোড
     async function loadStudentsForSchool(schoolId) {
         try {
             const snapshot = await studentsRef.where('schoolId', '==', schoolId).get();
@@ -472,7 +438,6 @@
         }
     }
 
-    // সার্চ এবং ডিসপ্লে লজিক (আগের মতোই)
     function selectGroup(group) {
         currentGroup = group;
         document.querySelectorAll('.group-btn').forEach(btn => btn.classList.remove('active'));
@@ -501,6 +466,9 @@
     }
     
     function displayStudent(s) {
+        // নিশ্চিত করছে মার্কশিটে স্কুলের নাম আছে (যদি ডাটাতে নাও থাকে তবে গ্লোবাল ভ্যারিয়েবল থেকে নিবে)
+        document.getElementById('displaySchoolNameHeader').innerText = s.schoolName || currentSchoolName;
+
         document.getElementById('displayName').textContent = s.name;
         document.getElementById('displayRoll').textContent = s.roll;
         document.getElementById('displayMerit').textContent = s.merit;
@@ -528,7 +496,6 @@
             document.getElementById('loginSection').style.display = 'none';
             document.getElementById('uploadSection').style.display = 'block';
             updateCounts();
-            // লগইনের পর বর্তমান স্কুল হাইলাইট করে দেয়া
             if(currentSchoolId) highlightActiveInAdmin(currentSchoolId);
         } else { alert('❌ ভুল পাসওয়ার্ড!'); }
     }
@@ -539,7 +506,6 @@
         document.getElementById('businessCount').textContent = studentData.business.length;
     }
 
-    // CSV আপলোড এবং ডিলিট ফাংশন (আগের মতোই, শুধু currentSchoolId চেক সহ)
     function uploadCSV(group) {
         if (!currentSchoolId) { alert("⚠️ প্রথমে একটি প্রতিষ্ঠান সক্রিয় করুন!"); return; }
         const input = document.getElementById(group + 'File');
