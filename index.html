@@ -1,717 +1,611 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Student Marksheet Print</title>
-<style>
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 20px; margin: 0; }
-    
-    .controls { max-width: 500px; margin: 0 auto 20px; text-align: center; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    input { padding: 10px; width: 150px; border: 1px solid #ccc; border-radius: 4px; outline: none; }
-    button { padding: 10px 15px; cursor: pointer; background: #0d6efd; color: #fff; border: none; border-radius: 4px; font-weight: bold; margin-left: 5px; }
-    
-    .marksheet { 
-        max-width: 650px; 
-        margin: 0 auto; 
-        background: #fff; 
-        padding: 30px; 
-        border: 2px solid #0d6efd; 
-        display: none; 
-        box-sizing: border-box;
-    }
-    
-    .header { text-align: center; border-bottom: 2px solid #0d6efd; margin-bottom: 20px; padding-bottom: 10px; }
-    .header h2 { margin: 0; color: #0d6efd; font-size: 24px; text-transform: uppercase; }
-    .header p { margin: 5px 0; font-size: 14px; font-weight: bold; }
-
-    .info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; font-size: 14px; }
-    .info div { background: #f9f9f9; padding: 8px; border: 1px solid #eee; }
-
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    th { background: #0d6efd; color: #fff; padding: 8px; font-size: 13px; border: 1px solid #0d6efd; }
-    td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 13px; }
-    .bold-text { font-weight: bold; }
-
-    .summary { display: flex; justify-content: space-between; gap: 10px; }
-    .summary div { flex: 1; border: 1px solid #0d6efd; padding: 10px; text-align: center; }
-    .summary h4 { margin: 0; font-size: 12px; color: #333; }
-    .summary p { margin: 5px 0 0; font-size: 18px; font-weight: bold; color: #000; }
-
-    .footer { display: flex; justify-content: space-between; margin-top: 60px; }
-    .footer span { border-top: 1px solid #000; padding-top: 5px; width: 120px; text-align: center; font-size: 12px; font-weight: bold; }
-
-    @media print {
-        @page { size: auto; margin: 10mm; }
-        body { background: #fff; padding: 0; }
-        .controls, .print-btn-hidden { display: none !important; }
-        .marksheet { 
-            display: block !important; 
-            border: 2px solid #000; 
-            width: 100%; 
-            max-width: 100%;
-            margin: 0;
-            padding: 20px;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>নির্বাচনী পরীক্ষার মার্কসিট-২০২৬</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        .header-top {
+            background: white; padding: 15px 25px;
+            border-radius: 10px; margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        th { background: #f0f0f0 !important; color: #000 !important; border: 1px solid #000; }
-        td { border: 1px solid #000; }
-        .summary div { border: 1px solid #000; }
-        .header h2 { color: #000; }
-    }
-</style>
+        .header-top h2 { color: #0d6efd; margin: 0; font-size: 1.2rem; }
+        
+        /* স্কুলের নাম দেখানোর জন্য ব্যাজ */
+        .active-school-badge {
+            background: #0d6efd; color: white;
+            padding: 8px 20px; border-radius: 20px;
+            font-weight: bold; font-size: 1rem;
+            box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3);
+        }
+        
+        .settings-btn {
+            background: #6c757d; color: white; border: none;
+            width: 45px; height: 45px; border-radius: 50%;
+            font-size: 24px; cursor: pointer;
+        }
+        
+        .controls {
+            background: white; padding: 25px;
+            border-radius: 10px; margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .group-selector { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; }
+        .group-btn {
+            padding: 12px 35px; border: 2px solid #0d6efd;
+            background: white; border-radius: 50px;
+            font-size: 1.1rem; font-weight: bold; cursor: pointer;
+        }
+        .group-btn.science { border-color: #28a745; color: #28a745; }
+        .group-btn.science.active { background: #28a745; color: white; }
+        .group-btn.humanities { border-color: #fd7e14; color: #fd7e14; }
+        .group-btn.humanities.active { background: #fd7e14; color: white; }
+        .group-btn.business { border-color: #dc3545; color: #dc3545; }
+        .group-btn.business.active { background: #dc3545; color: white; }
+        
+        .search-box { display: flex; justify-content: center; gap: 10px; }
+        .search-box input {
+            padding: 12px 15px; width: 250px;
+            border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;
+        }
+        .search-box button {
+            padding: 12px 30px; background: #0d6efd; color: white;
+            border: none; border-radius: 8px; cursor: pointer;
+        }
+        
+        .admin-panel {
+            background: white; padding: 25px; border-radius: 10px;
+            margin-bottom: 20px; display: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); border: 2px solid #0d6efd;
+        }
+        .admin-panel.show { display: block; }
+        .login-box { text-align: center; padding: 30px; }
+        .login-box input {
+            padding: 12px 15px; width: 280px; border: 2px solid #ddd;
+            border-radius: 8px; margin-bottom: 15px;
+        }
+        
+        /* সেটিংস এর ভেতরে স্কুল ম্যানেজমেন্ট */
+        .school-management {
+            background: #f0f7ff; padding: 20px; border-radius: 8px;
+            margin-bottom: 20px; border: 2px solid #0d6efd;
+        }
+        .school-management h4 { margin-bottom: 15px; color: #0d6efd; border-bottom: 1px solid #b3d7ff; padding-bottom: 10px; }
+        
+        /* লিস্ট স্টাইল */
+        .school-list-admin {
+            max-height: 200px; overflow-y: auto;
+            border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px;
+        }
+        .school-item-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 15px; border-bottom: 1px solid #eee;
+        }
+        .school-item-row:last-child { border-bottom: none; }
+        .school-item-row.active { background: #d1e7dd; font-weight: bold; border-left: 4px solid #28a745; }
+        
+        .activate-btn {
+            padding: 5px 15px; font-size: 12px; border: none;
+            border-radius: 15px; cursor: pointer; font-weight: bold;
+            background: #0d6efd; color: white;
+        }
+        .activate-btn:disabled { background: #28a745; cursor: default; }
+        
+        .add-school-box { display: flex; gap: 10px; margin-top: 10px; }
+        .add-school-box input { flex: 1; padding: 10px; border: 1px solid #ced4da; border-radius: 5px; }
+        .add-school-btn { background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        
+        .group-upload { border-left: 5px solid; padding: 20px; margin-bottom: 20px; background: #f8f9fa; border-radius: 8px; }
+        .group-upload.science { border-left-color: #28a745; }
+        .group-upload.humanities { border-left-color: #fd7e14; }
+        .group-upload.business { border-left-color: #dc3545; }
+        
+        .file-input { display: flex; gap: 10px; margin-bottom: 10px; }
+        .file-input input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 5px; }
+        .upload-btn { padding: 8px 25px; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .upload-btn.science { background: #28a745; }
+        .upload-btn.humanities { background: #fd7e14; }
+        .upload-btn.business { background: #dc3545; }
+        
+        .delete-btn { background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; margin-top: 10px; width: 100%; }
+        
+        .debug-box { margin-top: 20px; padding: 15px; background: #1e1e1e; color: #00ff00; border: 2px solid #00ff00; border-radius: 8px; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; font-size: 12px; }
+        .progress-bar { width: 100%; height: 20px; background: #f0f0f0; border-radius: 10px; margin: 10px 0; overflow: hidden; }
+        .progress-fill { height: 100%; background: #28a745; width: 0%; transition: width 0.3s; }
+        
+        .marksheet { background: white; padding: 30px; border: 2px solid #0d6efd; border-radius: 10px; display: none; }
+        
+        .print-btn { text-align: right; margin-bottom: 20px; }
+        .print-btn button { padding: 8px 20px; background: #198754; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        
+        .header { text-align: center; border-bottom: 2px solid #0d6efd; padding-bottom: 15px; margin-bottom: 20px; }
+        .header h2 { color: #0d6efd; margin-bottom: 5px; }
+        .group-badge { display: inline-block; padding: 5px 25px; border-radius: 25px; font-weight: bold; margin-top: 10px; }
+        .group-badge.science { background: #28a745; color: white; }
+        .group-badge.humanities { background: #fd7e14; color: white; }
+        .group-badge.business { background: #dc3545; color: white; }
+        
+        .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 25px; }
+        .info-item b { color: #0d6efd; margin-right: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+        th { background: #0d6efd; color: white; padding: 10px; }
+        td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        
+        .summary { display: flex; gap: 15px; margin-bottom: 25px; }
+        .summary-item { flex: 1; color: white; padding: 12px; text-align: center; border-radius: 8px; }
+        .summary-item:nth-child(1) { background: linear-gradient(135deg, #28a745, #20c997); }
+        .summary-item:nth-child(2) { background: linear-gradient(135deg, #fd7e14, #ffc107); }
+        .summary-item:nth-child(3) { background: linear-gradient(135deg, #dc3545, #c82333); }
+        .summary-item h4 { margin-bottom: 5px; font-size: 0.85rem; }
+        .summary-item p { font-size: 1.3rem; font-weight: bold; }
+        
+        .footer { display: flex; justify-content: space-between; margin-top: 30px; }
+        .footer span { border-top: 2px solid #333; padding-top: 8px; width: 150px; text-align: center; font-weight: bold; }
+        
+        @media print {
+            .controls, .print-btn, .header-top, .admin-panel { display: none !important; }
+            .marksheet { display: block !important; }
+        }
+    </style>
 </head>
 <body>
 
-<div class="controls">
-    <h3>Result Search</h3>
-    <input id="rollInput" type="number" placeholder="Enter Roll">
-    <button onclick="search()">Search</button>
-</div>
-
-<div id="marksheetBox" class="marksheet">
-    <div style="text-align: right; margin-bottom: 10px;">
-        <button class="print-btn-hidden" onclick="window.print()" style="background: #198754; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Print Marksheet</button>
+<div class="container">
+    <div class="header-top">
+        <h2>📄 নির্বাচনী পরীক্ষার মার্কসিট-২০২৬</h2>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <!-- ইউজার শুধু নাম দেখবে, কোনো ড্রপডাউন নেই -->
+            <span id="currentSchoolLabel" class="active-school-badge">লোড হচ্ছে...</span>
+            <button class="settings-btn" onclick="toggleAdmin()">⚙️</button>
+        </div>
     </div>
 
-    <div class="header">
-        <h2>SHERKHALI GOVT. WOMEN'S COLLEGE</h2>
-        <p>SCIENCE GROUP - TEST EXAM-2026</p>
-        <p>Academic Transcript</p>
+    <div class="controls">
+        <div class="group-selector">
+            <button class="group-btn science" onclick="selectGroup('science')">বিজ্ঞান</button>
+            <button class="group-btn humanities active" onclick="selectGroup('humanities')">মানবিক</button>
+            <button class="group-btn business" onclick="selectGroup('business')">ব্যবসায় শিক্ষা</button>
+        </div>
+        
+        <div class="search-box">
+            <input type="number" id="rollNumber" placeholder="রোল নম্বর দিন">
+            <button onclick="searchStudent()">খুঁজুন</button>
+        </div>
     </div>
 
-    <div class="info">
-        <div><b>Name:</b> <span id="sName"></span></div>
-        <div><b>Roll:</b> <span id="sRoll"></span></div>
-        <div><b>Group:</b> <span id="sGroup"></span></div>
-        <div><b>Status:</b> <span id="sStatus"></span></div>
+    <!-- অ্যাডমিন প্যানেল -->
+    <div id="adminPanel" class="admin-panel">
+        <div id="loginSection">
+            <div class="login-box">
+                <h3>🔐 এডমিন লগইন</h3>
+                <input type="password" id="password" placeholder="পাসওয়ার্ড দিন">
+                <br>
+                <button onclick="adminLogin()">লগইন</button>
+            </div>
+        </div>
+        
+        <div id="uploadSection" style="display: none;">
+            
+            <!-- স্কুল ম্যানেজমেন্ট (শুধু এখানেই স্কুলের তালিকা থাকবে) -->
+            <div class="school-management">
+                <h4>🏫 প্রতিষ্ঠান পরিচালনা (শুধুমাত্র অ্যাডমিনের জন্য)</h4>
+                <p style="font-size:13px; color:#666; margin-bottom:10px;">
+                    নিচের তালিকা থেকে একটি প্রতিষ্ঠান 'সক্রিয়' করুন। সক্রিয় করলে ওয়েবসাইটের লিংক পরিবর্তন হবে এবং ইউজাররা শুধু সেই প্রতিষ্ঠানটিই দেখতে পাবে।
+                </p>
+                
+                <!-- স্কুলের তালিকা -->
+                <div id="schoolListAdmin" class="school-list-admin">
+                    <!-- জেএস দিয়ে এখানে আইটেম আসবে -->
+                    <p style="padding:10px; text-align:center; color:#999;">লোড হচ্ছে...</p>
+                </div>
+                
+                <!-- নতুন স্কুল যোগ -->
+                <div style="border-top: 1px dashed #ccc; padding-top: 15px;">
+                    <label><b>নতুন প্রতিষ্ঠান যোগ:</b></label>
+                    <div class="add-school-box">
+                        <input type="text" id="newSchoolName" placeholder="নতুন প্রতিষ্ঠানের নাম লিখুন">
+                        <button onclick="addNewSchool()" class="add-school-btn">যোগ করুন</button>
+                    </div>
+                </div>
+            </div>
+
+            <h3>📤 CSV ফাইল আপলোড করুন</h3>
+            <p style="color:#dc3545; margin-bottom:15px; font-weight:bold;">⚠️ আপলোডের আগে উপরের তালিকা থেকে সঠিক প্রতিষ্ঠান 'সক্রিয়' আছে কিনা দেখে নিন!</p>
+            
+            <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+            
+            <div class="group-upload science">
+                <h4>🔬 বিজ্ঞান গ্রুপ</h4>
+                <div class="file-input">
+                    <input type="file" id="scienceFile" accept=".csv">
+                    <button class="upload-btn science" onclick="uploadCSV('science')">আপলোড</button>
+                </div>
+                <div id="scienceStatus">মোট: <span id="scienceCount">০</span> জন</div>
+            </div>
+            
+            <div class="group-upload humanities">
+                <h4>📚 মানবিক গ্রুপ</h4>
+                <div class="file-input">
+                    <input type="file" id="humanitiesFile" accept=".csv">
+                    <button class="upload-btn humanities" onclick="uploadCSV('humanities')">আপলোড</button>
+                </div>
+                <div id="humanitiesStatus">মোট: <span id="humanitiesCount">০</span> জন</div>
+            </div>
+            
+            <div class="group-upload business">
+                <h4>💼 ব্যবসায় শিক্ষা গ্রুপ</h4>
+                <div class="file-input">
+                    <input type="file" id="businessFile" accept=".csv">
+                    <button class="upload-btn business" onclick="uploadCSV('business')">আপলোড</button>
+                </div>
+                <div id="businessStatus">মোট: <span id="businessCount">০</span> জন</div>
+            </div>
+            
+            <button class="delete-btn" onclick="deleteCurrentSchoolData()">🗑️ বর্তমান সক্রিয় প্রতিষ্ঠানের সব ডাটা ডিলিট করুন</button>
+            
+            <div id="debugInfo" class="debug-box">⏳ সিস্টেম রেডি...</div>
+        </div>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Subject</th>
-                <th>MCQ</th>
-                <th>CQ</th>
-                <th>Prac</th>
-                <th>Total</th>
-                <th>GP</th>
-                <th>Grade</th>
-            </tr>
-        </thead>
-        <tbody id="subjectBody"></tbody>
-    </table>
-
-    <div class="summary">
-        <div><h4>Total Marks</h4><p id="sTotal"></p></div>
-        <div><h4>GPA</h4><p id="sGPA"></p></div>
-        <div><h4>Failed Sub</h4><p id="sFail"></p></div>
-    </div>
-
-    <div class="footer">
-        <span>Guide Teacher</span>
-        <span>Principal</span>
+    <div id="marksheet" class="marksheet">
+        <div class="print-btn">
+            <button onclick="window.print()">🖨️ প্রিন্ট</button>
+        </div>
+        
+        <div class="header">
+            <h1 style="color: #4169e1;">SHAHZADPUR WOMEN'S COLLEGE</h1>
+            <h4 style="color: #27ae60;">।। শাহজাদপুর, সিরাজগঞ্জ ।।</h4>
+            <h5 style="color: #27ae60;">www.swdc.edu.bd</h5>
+            <h3>-----------------------------------------------------</h3>
+            <h4 style="color: #4169e1;">নির্বাচনী পরীক্ষা-২০২৬ এর একাডেমিক ট্রান্সক্রিপ্ট</h4>
+            <div id="groupBadge" class="group-badge humanities">মানবিক</div>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-item"><b>নাম:</b> <span id="displayName">-</span></div>
+            <div class="info-item"><b>রোল:</b> <span id="displayRoll">-</span></div>
+            <div class="info-item"><b>মেধাক্রম:</b> <span id="displayMerit">-</span></div>
+            <div class="info-item"><b>ফলাফল:</b> <span id="displayResult">-</span></div>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>বিষয় কোড</th><th>বিষয়ের নাম</th><th>MCQ</th><th>CQ</th><th>Practical</th><th>মোট</th><th>GP</th><th>গ্রেড</th>
+                </tr>
+            </thead>
+            <tbody id="subjectRows"></tbody>
+        </table>
+        
+        <div class="summary">
+            <div class="summary-item"><h4>মোট নম্বর</h4><p id="totalScore">০</p></div>
+            <div class="summary-item"><h4>GPA</h4><p id="gpaScore">০</p></div>
+            <div class="summary-item"><h4>ফেল</h4><p id="failCount">০</p></div>
+        </div>
+        
+        <div class="footer">
+            <span>শিক্ষক</span><span>অধ্যক্ষ</span>
+        </div>
     </div>
 </div>
 
 <script>
-    const studentData = [
-       {
-    "merit": 1,
-    "name": "TANNI KHATUN",
-    "roll": "51",
-    "group": "Science",
-    "total_score": "813",
-    "gpa": "A- (3.5)",
-    "failed_count": 0,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "15", "cq": "30 + 54", "p": "", "t": "99", "gp": "2", "g": "C"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "48 + 46", "p": "", "t": "94", "gp": "2", "g": "C"},
-      {"n": "Physics 1st & Physics 2nd", "m": "9 + 18", "cq": "45 + 30", "p": "25 + 23", "t": "150", "gp": "4", "g": "A"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "20 + 17", "cq": "35 + 44", "p": "20 + 20", "t": "156", "gp": "4", "g": "A"},
-      {"n": "Biology 1st & Biology 2nd", "m": "17 + 14", "cq": "33 + 32", "p": "24 + 23", "t": "143", "gp": "4", "g": "A"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "14 + 8", "cq": "17 + 15", "p": "20 + 15", "t": "89", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "16", "cq": "41", "p": "25", "t": "82", "gp": "5", "g": "A+"}
-    ]
-  },
-  {
-    "merit": 2,
-    "name": "LABIBA BINTE ROUF",
-    "roll": "244",
-    "group": "Science",
-    "total_score": "699",
-    "gpa": "B (3.33)",
-    "failed_count": 0,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "14", "cq": "40 + 46", "p": "", "t": "100", "gp": "3", "g": "B"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "67 + 72", "p": "", "t": "139", "gp": "3.5", "g": "A-"},
-      {"n": "Physics 1st & Physics 2nd", "m": "10 + 9", "cq": "31 + 22", "p": "23 + 20", "t": "115", "gp": "3", "g": "B"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "9 + 12", "cq": "34 + 30", "p": "20 + 20", "t": "125", "gp": "3.5", "g": "A-"},
-      {"n": "Biology 1st & Biology 2nd", "m": "10 + 9", "cq": "19 + 30", "p": "20 + 23", "t": "111", "gp": "3", "g": "B"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "8 + 5", "cq": "5 + 4", "p": "8 + 9", "t": "39", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "15", "cq": "33", "p": "22", "t": "70", "gp": "4", "g": "A"}
-    ]
-  },
-  {
-    "merit": 3,
-    "name": "MST. BITHI KHATUN",
-    "roll": "52",
-    "group": "Science",
-    "total_score": "728",
-    "gpa": "F (0.0)",
-    "failed_count": 2,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "11", "cq": "24 + 53", "p": "", "t": "88", "gp": "2", "g": "C"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "55 + 46", "p": "", "t": "101", "gp": "3", "g": "B"},
-      {"n": "Physics 1st & Physics 2nd", "m": "15", "cq": "23", "p": "20", "t": "58", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "14 + 8", "cq": "40 + 47", "p": "20 + 20", "t": "149", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "13 + 11", "cq": "38 + 28", "p": "24 + 23", "t": "137", "gp": "3.5", "g": "A-"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "29 + 9", "cq": "12 + 48", "p": "20 + 20", "t": "138", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "11", "cq": "26", "p": "20", "t": "57", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 4,
-    "name": "MST. SUBORNA KHATUN",
-    "roll": "230",
-    "group": "Science",
-    "total_score": "716",
-    "gpa": "F (0.0)",
-    "failed_count": 1,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "11", "cq": "25 + 57", "p": "", "t": "93", "gp": "2", "g": "C"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "55 + 43", "p": "", "t": "98", "gp": "2", "g": "C"},
-      {"n": "Physics 1st & Physics 2nd", "m": "8 + 9", "cq": "7 + 8", "p": "15 + 15", "t": "62", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "20 + 22", "cq": "23 + 21", "p": "20 + 20", "t": "126", "gp": "3.5", "g": "A-"},
-      {"n": "Biology 1st & Biology 2nd", "m": "11 + 10", "cq": "26 + 36", "p": "22 + 24", "t": "129", "gp": "3.5", "g": "A-"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "35 + 35", "cq": "10 + 11", "p": "22 + 22", "t": "135", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "14", "cq": "36", "p": "23", "t": "73", "gp": "4", "g": "A"}
-    ]
-  },
-  {
-    "merit": 5,
-    "name": "JANNATUL FERDUS URMI",
-    "roll": "268",
-    "group": "Science",
-    "total_score": "689",
-    "gpa": "F (0.0)",
-    "failed_count": 2,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "12", "cq": "31", "p": "", "t": "43", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "60 + 54", "p": "", "t": "114", "gp": "3", "g": "B"},
-      {"n": "Physics 1st & Physics 2nd", "m": "10 + 13", "cq": "32 + 17", "p": "23 + 17", "t": "112", "gp": "3", "g": "B"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "6 + 8", "cq": "32 + 21", "p": "20 + 20", "t": "107", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "11 + 12", "cq": "28 + 21", "p": "20 + 20", "t": "112", "gp": "3", "g": "B"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "20 + 39", "cq": "10 + 13", "p": "20 + 25", "t": "127", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "9", "cq": "40", "p": "25", "t": "74", "gp": "4", "g": "A"}
-    ]
-  },
-  {
-    "merit": 6,
-    "name": "MST. ETI KHATUN",
-    "roll": "12",
-    "group": "Science",
-    "total_score": "676",
-    "gpa": "F (0.0)",
-    "failed_count": 2,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "12", "cq": "16 + 62", "p": "", "t": "90", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "62 + 33", "p": "", "t": "95", "gp": "2", "g": "C"},
-      {"n": "Physics 1st & Physics 2nd", "m": "19 + 14", "cq": "11 + 17", "p": "15 + 18", "t": "94", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "16 + 11", "cq": "17 + 35", "p": "20 + 20", "t": "119", "gp": "3", "g": "B"},
-      {"n": "Biology 1st & Biology 2nd", "m": "17 + 10", "cq": "17 + 19", "p": "20 + 20", "t": "103", "gp": "3", "g": "B"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "21 + 22", "cq": "17 + 20", "p": "20 + 20", "t": "120", "gp": "3.5", "g": "A-"},
-      {"n": "ICT", "m": "15", "cq": "22", "p": "18", "t": "55", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 7,
-    "name": "MST. TAMANNA KHATUN",
-    "roll": "44",
-    "group": "Science",
-    "total_score": "660",
-    "gpa": "F (0.0)",
-    "failed_count": 1,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "15", "cq": "24 + 41", "p": "", "t": "80", "gp": "2", "g": "C"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "48 + 18", "p": "", "t": "66", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "10 + 16", "cq": "17 + 20", "p": "15 + 20", "t": "98", "gp": "2", "g": "C"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "10 + 9", "cq": "30 + 41", "p": "20 + 20", "t": "130", "gp": "3.5", "g": "A-"},
-      {"n": "Biology 1st & Biology 2nd", "m": "15 + 9", "cq": "26 + 22", "p": "24 + 22", "t": "118", "gp": "3", "g": "B"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "20 + 28", "cq": "14 + 9", "p": "20 + 20", "t": "111", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "12", "cq": "25", "p": "20", "t": "57", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 8,
-    "name": "MST. SHAMIMA KHATUN",
-    "roll": "210",
-    "group": "Science",
-    "total_score": "650",
-    "gpa": "F (0.0)",
-    "failed_count": 3,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "18", "cq": "24 + 40", "p": "", "t": "82", "gp": "2", "g": "C"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "42 + 25", "p": "", "t": "67", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "8", "cq": "3", "p": "15", "t": "26", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "6 + 9", "cq": "25 + 21", "p": "20 + 20", "t": "101", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "13 + 10", "cq": "20 + 21", "p": "21 + 20", "t": "105", "gp": "3", "g": "B"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "31 + 20", "cq": "15 + 6", "p": "20 + 20", "t": "112", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "14", "cq": "18", "p": "125", "t": "157", "gp": "5", "g": "A+"}
-    ]
-  },
-  {
-    "merit": 9,
-    "name": "MST. SATHI KHATUN",
-    "roll": "107",
-    "group": "Science",
-    "total_score": "641",
-    "gpa": "F (0.0)",
-    "failed_count": 1,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "19", "cq": "28 + 53", "p": "", "t": "100", "gp": "3", "g": "B"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "44 + 36", "p": "", "t": "80", "gp": "2", "g": "C"},
-      {"n": "Physics 1st & Physics 2nd", "m": "11 + 11", "cq": "17 + 17", "p": "18 + 17", "t": "91", "gp": "2", "g": "C"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "17 + 21", "cq": "21 + 27", "p": "20 + 20", "t": "126", "gp": "3.5", "g": "A-"},
-      {"n": "Biology 1st & Biology 2nd", "m": "13 + 9", "cq": "11 + 18", "p": "15 + 20", "t": "86", "gp": "0", "g": "F"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "19 + 17", "cq": "18 + 10", "p": "20 + 20", "t": "104", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "18", "cq": "19", "p": "17", "t": "54", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 10,
-    "name": "MST. RABEYA KHATUN",
-    "roll": "153",
-    "group": "Science",
-    "total_score": "633",
-    "gpa": "F (0.0)",
-    "failed_count": 1,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "18", "cq": "42 + 58", "p": "", "t": "118", "gp": "3", "g": "B"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "35 + 33", "p": "", "t": "68", "gp": "1", "g": "D"},
-      {"n": "Physics 1st & Physics 2nd", "m": "15 + 12", "cq": "19 + 18", "p": "20 + 18", "t": "102", "gp": "3", "g": "B"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "10 + 8", "cq": "44 + 43", "p": "20 + 20", "t": "145", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "13 + 9", "cq": "20 + 17", "p": "23 + 21", "t": "103", "gp": "3", "g": "B"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "10 + 7", "cq": "2 + 3", "p": "8 + 9", "t": "39", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "14", "cq": "24", "p": "20", "t": "58", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 11,
-    "name": "MST. SIMA KHATUN",
-    "roll": "43",
-    "group": "Science",
-    "total_score": "632",
-    "gpa": "F (0.0)",
-    "failed_count": 4,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "11", "cq": "20 + 38", "p": "", "t": "69", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "52 + 20", "p": "", "t": "72", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "8 + 11", "cq": "12 + 18", "p": "15 + 18", "t": "82", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "9 + 8", "cq": "28 + 17", "p": "20 + 20", "t": "102", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "10 + 9", "cq": "21 + 17", "p": "21 + 20", "t": "98", "gp": "2", "g": "C"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "24 + 38", "cq": "13 + 19", "p": "20 + 23", "t": "137", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "12", "cq": "37", "p": "23", "t": "72", "gp": "4", "g": "A"}
-    ]
-  },
-  {
-    "merit": 12,
-    "name": "EASMIN KHATUN",
-    "roll": "252",
-    "group": "Science",
-    "total_score": "631",
-    "gpa": "F (0.0)",
-    "failed_count": 2,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "14", "cq": "30", "p": "", "t": "44", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "53 + 33", "p": "", "t": "86", "gp": "2", "g": "C"},
-      {"n": "Physics 1st & Physics 2nd", "m": "9 + 11", "cq": "17 + 18", "p": "18 + 18", "t": "91", "gp": "2", "g": "C"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "6 + 8", "cq": "17 + 26", "p": "20 + 20", "t": "97", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "12 + 12", "cq": "24 + 35", "p": "22 + 24", "t": "129", "gp": "3.5", "g": "A-"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "24 + 39", "cq": "10 + 13", "p": "20 + 25", "t": "131", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "11", "cq": "22", "p": "20", "t": "53", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 13,
-    "name": "MST. SANJIDA KHATUN",
-    "roll": "269",
-    "group": "Science",
-    "total_score": "625",
-    "gpa": "F (0.0)",
-    "failed_count": 3,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "16", "cq": "41", "p": "", "t": "57", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "62 + 48", "p": "", "t": "110", "gp": "3", "g": "B"},
-      {"n": "Physics 1st & Physics 2nd", "m": "9 + 11", "cq": "18 + 14", "p": "20 + 15", "t": "87", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "6 + 10", "cq": "30 + 33", "p": "20 + 20", "t": "119", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "13 + 13", "cq": "38 + 36", "p": "24 + 25", "t": "149", "gp": "4", "g": "A"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "9 + 6", "cq": "2 + 14", "p": "8 + 9", "t": "48", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "9", "cq": "26", "p": "20", "t": "55", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 14,
-    "name": "AKHI BINTE ALOMGIR",
-    "roll": "259",
-    "group": "Science",
-    "total_score": "620",
-    "gpa": "F (0.0)",
-    "failed_count": 2,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "10", "cq": "28", "p": "", "t": "38", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "52", "p": "", "t": "52", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "11 + 11", "cq": "33 + 23", "p": "20 + 22", "t": "120", "gp": "3.5", "g": "A-"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "9 + 18", "cq": "37 + 22", "p": "20 + 20", "t": "126", "gp": "3.5", "g": "A-"},
-      {"n": "Biology 1st & Biology 2nd", "m": "19 + 9", "cq": "17 + 31", "p": "19 + 22", "t": "117", "gp": "3", "g": "B"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "21 + 25", "cq": "10 + 12", "p": "20 + 20", "t": "108", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "13", "cq": "26", "p": "20", "t": "59", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 15,
-    "name": "MST. SIYAM AKTER",
-    "roll": "226",
-    "group": "Science",
-    "total_score": "602",
-    "gpa": "F (0.0)",
-    "failed_count": 4,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "8", "cq": "20 + 36", "p": "", "t": "64", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "48 + 33", "p": "", "t": "81", "gp": "2", "g": "C"},
-      {"n": "Physics 1st & Physics 2nd", "m": "8 + 13", "cq": "2 + 3", "p": "15 + 15", "t": "56", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "12 + 17", "cq": "18 + 12", "p": "20 + 20", "t": "99", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "12 + 9", "cq": "11 + 26", "p": "15 + 23", "t": "96", "gp": "0", "g": "F"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "38 + 36", "cq": "22 + 24", "p": "22 + 20", "t": "162", "gp": "5", "g": "A+"},
-      {"n": "ICT", "m": "11", "cq": "18", "p": "15", "t": "44", "gp": "2", "g": "C"}
-    ]
-  },
-  {
-    "merit": 16,
-    "name": "MST. YESMIN KHATUN",
-    "roll": "175",
-    "group": "Science",
-    "total_score": "601",
-    "gpa": "F (0.0)",
-    "failed_count": 2,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "21", "cq": "25 + 34", "p": "", "t": "80", "gp": "2", "g": "C"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "37 + 33", "p": "", "t": "70", "gp": "1", "g": "D"},
-      {"n": "Physics 1st & Physics 2nd", "m": "9 + 10", "cq": "1 + 5", "p": "15 + 15", "t": "55", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "8 + 9", "cq": "34 + 32", "p": "20 + 20", "t": "123", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "9 + 13", "cq": "22 + 17", "p": "20 + 20", "t": "101", "gp": "3", "g": "B"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "24 + 27", "cq": "13 + 10", "p": "20 + 20", "t": "114", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "10", "cq": "27", "p": "21", "t": "58", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 17,
-    "name": "MST. CAMELIA AKTER",
-    "roll": "138",
-    "group": "Science",
-    "total_score": "584",
-    "gpa": "F (0.0)",
-    "failed_count": 3,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "11", "cq": "25 + 50", "p": "", "t": "86", "gp": "2", "g": "C"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "26 + 16", "p": "", "t": "42", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "8 + 12", "cq": "10 + 3", "p": "15 + 15", "t": "63", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "10 + 8", "cq": "40 + 43", "p": "20 + 20", "t": "141", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "11 + 9", "cq": "30 + 42", "p": "22 + 22", "t": "136", "gp": "3.5", "g": "A-"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "5 + 6", "cq": "2 + 23", "p": "8 + 15", "t": "59", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "9", "cq": "28", "p": "20", "t": "57", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 18,
-    "name": "MORIOM KHATUN",
-    "roll": "213",
-    "group": "Science",
-    "total_score": "564",
-    "gpa": "F (0.0)",
-    "failed_count": 5,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "12", "cq": "18 + 57", "p": "", "t": "87", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "50 + 24", "p": "", "t": "74", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "10 + 8", "cq": "2 + 3", "p": "15 + 15", "t": "53", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "6 + 13", "cq": "36 + 37", "p": "20 + 20", "t": "132", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "13 + 10", "cq": "13 + 19", "p": "18 + 21", "t": "94", "gp": "0", "g": "F"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "10 + 5", "cq": "6 + 28", "p": "8 + 9", "t": "66", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "13", "cq": "25", "p": "20", "t": "58", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 19,
-    "name": "FATEMA TUS JOHORA URMI",
-    "roll": "197",
-    "group": "Science",
-    "total_score": "548",
-    "gpa": "F (0.0)",
-    "failed_count": 2,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "16", "cq": "24 + 53", "p": "", "t": "93", "gp": "2", "g": "C"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "50 + 35", "p": "", "t": "85", "gp": "2", "g": "C"},
-      {"n": "Physics 1st & Physics 2nd", "m": "9 + 9", "cq": "13 + 1", "p": "15 + 15", "t": "62", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "15 + 11", "cq": "21 + 13", "p": "20 + 20", "t": "100", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "9 + 12", "cq": "28 + 21", "p": "20 + 20", "t": "110", "gp": "3", "g": "B"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "10 + 7", "cq": "2 + 1", "p": "8 + 9", "t": "37", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "14", "cq": "26", "p": "21", "t": "61", "gp": "3.5", "g": "A-"}
-    ]
-  },
-  {
-    "merit": 20,
-    "name": "MST. ANJUMAN KHATUN",
-    "roll": "229",
-    "group": "Science",
-    "total_score": "521",
-    "gpa": "F (0.0)",
-    "failed_count": 5,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "11", "cq": "25 + 47", "p": "", "t": "83", "gp": "2", "g": "C"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "29 + 24", "p": "", "t": "53", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "8 + 8", "cq": "2 + 2", "p": "15 + 15", "t": "50", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "13 + 22", "cq": "11 + 14", "p": "20 + 20", "t": "100", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "12 + 26", "cq": "17 + 9", "p": "19 + 23", "t": "106", "gp": "0", "g": "F"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "18 + 17", "cq": "9 + 10", "p": "20 + 20", "t": "94", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "8", "cq": "12", "p": "15", "t": "35", "gp": "0", "g": "F"}
-    ]
-  },
-  {
-    "merit": 21,
-    "name": "MST. FARJANA KHATUN",
-    "roll": "90",
-    "group": "Science",
-    "total_score": "515",
-    "gpa": "F (0.0)",
-    "failed_count": 3,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "19", "cq": "24 + 38", "p": "", "t": "81", "gp": "2", "g": "C"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "50 + 37", "p": "", "t": "87", "gp": "2", "g": "C"},
-      {"n": "Physics 1st & Physics 2nd", "m": "8 + 12", "cq": "1 + 0", "p": "15 + 15", "t": "51", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "12 + 8", "cq": "22 + 21", "p": "20 + 20", "t": "103", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "13 + 9", "cq": "13 + 22", "p": "16 + 22", "t": "95", "gp": "0", "g": "F"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "8 + 6", "cq": "9 + 0", "p": "8 + 9", "t": "40", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "10", "cq": "28", "p": "20", "t": "58", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 22,
-    "name": "MST. SUMAIYA KHATUN",
-    "roll": "13",
-    "group": "Science",
-    "total_score": "514",
-    "gpa": "F (0.0)",
-    "failed_count": 5,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "19", "cq": "18 + 29", "p": "", "t": "66", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "44 + 14", "p": "", "t": "58", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "8 + 6", "cq": "3 + 5", "p": "15 + 15", "t": "52", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "14 + 7", "cq": "26 + 18", "p": "20 + 20", "t": "105", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "11 + 10", "cq": "3 + 5", "p": "15 + 15", "t": "59", "gp": "0", "g": "F"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "23 + 22", "cq": "14 + 22", "p": "20 + 23", "t": "124", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "11", "cq": "21", "p": "18", "t": "50", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 23,
-    "name": "MST. AYSHA SIDDIKA BRISTY",
-    "roll": "207",
-    "group": "Science",
-    "total_score": "502",
-    "gpa": "F (0.0)",
-    "failed_count": 3,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "7", "cq": "28 + 48", "p": "", "t": "83", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "50 + 41", "p": "", "t": "91", "gp": "2", "g": "C"},
-      {"n": "Physics 1st & Physics 2nd", "m": "6 + 8", "cq": "6 + 0", "p": "15 + 15", "t": "50", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "11 + 5", "cq": "32 + 13", "p": "20 + 20", "t": "101", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "13 + 9", "cq": "18 + 23", "p": "22 + 22", "t": "107", "gp": "3", "g": "B"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "6 + 3", "cq": "0 + 0", "p": "8 + 9", "t": "26", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "12", "cq": "17", "p": "15", "t": "44", "gp": "2", "g": "C"}
-    ]
-  },
-  {
-    "merit": 24,
-    "name": "MST. MIM KHATUN",
-    "roll": "250",
-    "group": "Science",
-    "total_score": "450",
-    "gpa": "F (0.0)",
-    "failed_count": 5,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "12", "cq": "28", "p": "", "t": "40", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "54 + 22", "p": "", "t": "76", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "11 + 9", "cq": "6 + 2", "p": "15 + 15", "t": "58", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "7 + 10", "cq": "10 + 8", "p": "20 + 20", "t": "75", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "9 + 12", "cq": "13 + 31", "p": "20 + 23", "t": "108", "gp": "0", "g": "F"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "8 + 8", "cq": "1 + 2", "p": "8 + 9", "t": "36", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "12", "cq": "25", "p": "20", "t": "57", "gp": "3", "g": "B"}
-    ]
-  },
-  {
-    "merit": 25,
-    "name": "MST. NUSRAT JAHAN",
-    "roll": "130",
-    "group": "Science",
-    "total_score": "442",
-    "gpa": "F (0.0)",
-    "failed_count": 6,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "15", "cq": "19 + 29", "p": "", "t": "63", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "19 + 23", "p": "", "t": "42", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "3 + 8", "cq": "1 + 3", "p": "15 + 15", "t": "45", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "6 + 2", "cq": "17 + 6", "p": "20 + 20", "t": "71", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "11 + 9", "cq": "7 + 5", "p": "16 + 16", "t": "64", "gp": "0", "g": "F"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "20 + 31", "cq": "9 + 13", "p": "20 + 22", "t": "115", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "13", "cq": "14", "p": "15", "t": "42", "gp": "0", "g": "F"}
-    ]
-  },
-  {
-    "merit": 26,
-    "name": "MST. MUKTA KHATUN",
-    "roll": "281",
-    "group": "Science",
-    "total_score": "422",
-    "gpa": "F (0.0)",
-    "failed_count": 6,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "12", "cq": "26", "p": "", "t": "38", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "33 + 22", "p": "", "t": "55", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "4 + 8", "cq": "2 + 0", "p": "15 + 15", "t": "44", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "10 + 5", "cq": "12 + 2", "p": "20 + 20", "t": "69", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "10 + 9", "cq": "11 + 23", "p": "18 + 22", "t": "93", "gp": "0", "g": "F"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "6 + 31", "cq": "6 + 9", "p": "20 + 20", "t": "92", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "6", "cq": "10", "p": "15", "t": "31", "gp": "0", "g": "F"}
-    ]
-  },
-  {
-    "merit": 27,
-    "name": "MST. RAZIA KHATUN",
-    "roll": "88",
-    "group": "Science",
-    "total_score": "412",
-    "gpa": "F (0.0)",
-    "failed_count": 5,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "9", "cq": "20 + 42", "p": "", "t": "71", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "30 + 33", "p": "", "t": "63", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "8 + 11", "cq": "9 + 7", "p": "15 + 15", "t": "65", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "3 + 10", "cq": "18 + 19", "p": "20 + 20", "t": "90", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "10", "cq": "12", "p": "16", "t": "38", "gp": "0", "g": "F"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "7 + 5", "cq": "1 + 12", "p": "8 + 9", "t": "42", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "9", "cq": "19", "p": "15", "t": "43", "gp": "2", "g": "C"}
-    ]
-  },
-  {
-    "merit": 28,
-    "name": "MST. TAHMINA ISLAM ETI",
-    "roll": "24",
-    "group": "Science",
-    "total_score": "410",
-    "gpa": "F (0.0)",
-    "failed_count": 6,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "13", "cq": "13 + 54", "p": "", "t": "80", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "40 + 15", "p": "", "t": "55", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "5 + 8", "cq": "1 + 0", "p": "15 + 15", "t": "44", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "8 + 6", "cq": "12 + 23", "p": "20 + 20", "t": "89", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "11 + 10", "cq": "11 + 9", "p": "18 + 16", "t": "75", "gp": "0", "g": "F"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "10 + 4", "cq": "0 + 0", "p": "8 + 9", "t": "31", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "11", "cq": "10", "p": "15", "t": "36", "gp": "0", "g": "F"}
-    ]
-  },
-  {
-    "merit": 29,
-    "name": "MST. ISRAT JAHAN EMU",
-    "roll": "87",
-    "group": "Science",
-    "total_score": "409",
-    "gpa": "F (0.0)",
-    "failed_count": 5,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "17", "cq": "24 + 33", "p": "", "t": "74", "gp": "1", "g": "D"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "25 + 22", "p": "", "t": "47", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "3 + 8", "cq": "1 + 0", "p": "15 + 15", "t": "42", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "8 + 11", "cq": "5 + 2", "p": "20 + 20", "t": "66", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "10 + 11", "cq": "3 + 2", "p": "15 + 14", "t": "55", "gp": "0", "g": "F"},
-      {"n": "Statistics 1st & Statistics 2nd", "m": "18 + 13", "cq": "12 + 6", "p": "20 + 20", "t": "89", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "8", "cq": "13", "p": "15", "t": "36", "gp": "0", "g": "F"}
-    ]
-  },
-  {
-    "merit": 30,
-    "name": "MST. ROKEYA KAHTUN",
-    "roll": "106",
-    "group": "Science",
-    "total_score": "192",
-    "gpa": "F (0.0)",
-    "failed_count": 5,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "10", "cq": "10 + 23", "p": "", "t": "43", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "26 + 33", "p": "", "t": "59", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "0", "cq": "0", "p": "0", "t": "0", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "13", "cq": "13", "p": "16", "t": "42", "gp": "0", "g": "F"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "9", "cq": "21", "p": "18", "t": "48", "gp": "2", "g": "C"}
-    ]
-  },
-  {
-    "merit": 31,
-    "name": "MST. KONEKA KHATUN",
-    "roll": "185",
-    "group": "Science",
-    "total_score": "67",
-    "gpa": "F (0.0)",
-    "failed_count": 6,
-    "subjects": [
-      {"n": "Bangla 1st & Bangla 2nd", "m": "10", "cq": "24", "p": "", "t": "34", "gp": "0", "g": "F"},
-      {"n": "ENGLISH 1ST & English 2nd", "m": "", "cq": "33", "p": "", "t": "33", "gp": "0", "g": "F"},
-      {"n": "Physics 1st & Physics 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
-      {"n": "Chemistry 1st & Chemistry 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
-      {"n": "Biology 1st & Biology 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
-      {"n": "Higher Math 1st & Higher Math 2nd", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"},
-      {"n": "ICT", "m": "", "cq": "", "p": "", "t": "0", "gp": "0", "g": "F"}
-    ]
-  }
+    // Firebase Configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyCX8UL1Db_L0C8axif6DRtVFpxP3JRIOf0",
+        authDomain: "result-efe56.firebaseapp.com",
+        projectId: "result-efe56",
+        storageBucket: "result-efe56.firebasestorage.app",
+        messagingSenderId: "282082969636",
+        appId: "1:282082969636:web:6526d08384a0493cad30b1"
+    };
 
-  ];
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const schoolsRef = db.collection("schools_list"); 
+    const studentsRef = db.collection("students");
 
-    function search() {
-        const roll = document.getElementById('rollInput').value;
-        const student = studentData.find(s => s.roll === roll);
-        const marksheet = document.getElementById('marksheetBox');
+    let studentData = { science: [], humanities: [], business: [] };
+    let currentGroup = 'humanities';
+    let currentSchoolId = null;
+    let currentSchoolName = "";
 
-        if (student) {
-            marksheet.style.display = "block";
-            document.getElementById('sName').innerText = student.name;
-            document.getElementById('sRoll').innerText = student.roll;
-            document.getElementById('sGroup').innerText = student.group || "Humanities";
-            
-            const status = student.failed_count === 0 ? "PASSED" : "FAILED (" + student.failed_count + ")";
-            document.getElementById('sStatus').innerText = status;
-            document.getElementById('sStatus').style.color = student.failed_count === 0 ? "green" : "red";
-            
-            const tbody = document.getElementById('subjectBody');
-            tbody.innerHTML = "";
-            student.subjects.forEach(sub => {
-                tbody.innerHTML += `<tr>
-                    <td style="text-align:left">${sub.n}</td>
-                    <td>${sub.m || '-'}</td>
-                    <td>${sub.cq || '-'}</td>
-                    <td>${sub.p || '-'}</td>
-                    <td class="bold-text">${sub.t}</td>
-                    <td>${sub.gp}</td>
-                    <td class="bold-text" style="color:${sub.g === 'F' ? 'red' : 'black'}">${sub.g}</td>
-                </tr>`;
-            });
+    // ================= CORE LOGIC =================
 
-            document.getElementById('sTotal').innerText = student.total_score;
-            document.getElementById('sGPA').innerText = student.gpa;
-            document.getElementById('sFail').innerText = student.failed_count;
+    window.onload = function() {
+        initApp();
+    };
+
+    // অ্যাপ ইনিশিয়ালাইজেশন
+    async function initApp() {
+        // ১. URL থেকে স্কুল আইডি চেক করা
+        const params = new URLSearchParams(window.location.search);
+        const schoolIdFromUrl = params.get('school');
+
+        // ২. অ্যাডমিনের জন্য স্কুলের লিস্ট লোড করা
+        await loadSchoolsListForAdmin();
+
+        // ৩. স্কুল সেট করা (URL থেকে বা ডিফল্ট)
+        if (schoolIdFromUrl) {
+            // URL তে আইডি থাকলে সেটা লোড করবে
+            await setActiveSchool(schoolIdFromUrl);
         } else {
-            alert("Roll number not found!");
-            marksheet.style.display = "none";
+            // URL এ আইডি না থাকলে ডাটাবেস চেক করবে কোনো ডিফল্ট সেট আছে কিনা (অপশনাল)
+            // অথবা ম্যানুয়ালি সেট করতে বলবে
+            document.getElementById('currentSchoolLabel').innerText = "প্রতিষ্ঠান নির্বাচন করুন";
+            document.getElementById('currentSchoolLabel').style.background = "#6c757d";
         }
+    }
+
+    // URL আপডেট করার ফাংশন
+    function updateBrowserUrl(id) {
+        const url = new URL(window.location);
+        if (id) {
+            url.searchParams.set('school', id);
+        } else {
+            url.searchParams.delete('school');
+        }
+        window.history.pushState({}, '', url);
+    }
+
+    // নির্দিষ্ট স্কুলকে সক্রিয় করার ফাংশন (অ্যাডমিন লিস্ট থেকে ক্লিক করলে বা URL থেকে)
+    async function setActiveSchool(id) {
+        try {
+            const doc = await schoolsRef.doc(id).get();
+            if (doc.exists) {
+                currentSchoolId = id;
+                currentSchoolName = doc.data().name;
+                
+                // UI আপডেট
+                document.getElementById('currentSchoolLabel').innerText = currentSchoolName;
+                document.getElementById('currentSchoolLabel').style.background = "#0d6efd";
+                
+                // অ্যাডমিন প্যানেলের লিস্টে হাইলাইট
+                highlightActiveInAdmin(id);
+                
+                // ডাটা লোড
+                await loadStudentsForSchool(id);
+                
+                // URL আপডেট
+                updateBrowserUrl(id);
+            } else {
+                alert("প্রতিষ্ঠানটি খুঁজে পাওয়া যায়নি।");
+            }
+        } catch (error) {
+            console.error("Error setting school:", error);
+        }
+    }
+
+    // অ্যাডমিন প্যানেলের লিস্টে সক্রিয় স্কুল হাইলাইট করা
+    function highlightActiveInAdmin(id) {
+        const rows = document.querySelectorAll('.school-item-row');
+        rows.forEach(row => {
+            if (row.dataset.id === id) {
+                row.classList.add('active');
+                row.querySelector('button').disabled = true;
+                row.querySelector('button').innerText = "সক্রিয়";
+            } else {
+                row.classList.remove('active');
+                const btn = row.querySelector('button');
+                btn.disabled = false;
+                btn.innerText = "সক্রিয় করুন";
+            }
+        });
+    }
+
+    // অ্যাডমিনের জন্য স্কুলের তালিকা তৈরি করা
+    async function loadSchoolsListForAdmin() {
+        const listContainer = document.getElementById('schoolListAdmin');
+        listContainer.innerHTML = '';
+        
+        try {
+            const snapshot = await schoolsRef.get();
+            if (snapshot.empty) {
+                listContainer.innerHTML = '<p style="padding:10px; text-align:center; color:#999;">কোনো প্রতিষ্ঠান নেই। নতুন যোগ করুন।</p>';
+                return;
+            }
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const div = document.createElement('div');
+                div.className = 'school-item-row';
+                div.dataset.id = doc.id;
+                div.innerHTML = `
+                    <span>${data.name}</span>
+                    <button class="activate-btn" onclick="setActiveSchool('${doc.id}')">সক্রিয় করুন</button>
+                `;
+                listContainer.appendChild(div);
+            });
+        } catch (error) {
+            listContainer.innerHTML = '<p style="color:red;">তালিকা লোডে সমস্যা হয়েছে</p>';
+        }
+    }
+
+    // নতুন স্কুল যোগ
+    async function addNewSchool() {
+        const input = document.getElementById('newSchoolName');
+        const name = input.value.trim();
+        if (!name) { alert("নাম লিখুন"); return; }
+        
+        try {
+            const docRef = await schoolsRef.add({ name: name });
+            alert("✅ প্রতিষ্ঠান যোগ হয়েছে");
+            input.value = '';
+            
+            // লিস্ট রিফ্রেশ
+            await loadSchoolsListForAdmin();
+            
+            // নতুন স্কুলটি অটো সক্রিয় করে দেয়া
+            await setActiveSchool(docRef.id);
+            
+        } catch (error) {
+            alert("এরর: " + error.message);
+        }
+    }
+
+    // স্টুডেন্ট ডাটা লোড
+    async function loadStudentsForSchool(schoolId) {
+        try {
+            const snapshot = await studentsRef.where('schoolId', '==', schoolId).get();
+            studentData = { science: [], humanities: [], business: [] };
+            
+            snapshot.forEach(doc => {
+                const s = doc.data();
+                if (s.group === 'science') studentData.science.push(s);
+                else if (s.group === 'humanities') studentData.humanities.push(s);
+                else if (s.group === 'business') studentData.business.push(s);
+            });
+            updateCounts();
+        } catch (error) {
+            console.error("Error loading students:", error);
+        }
+    }
+
+    // সার্চ এবং ডিসপ্লে লজিক (আগের মতোই)
+    function selectGroup(group) {
+        currentGroup = group;
+        document.querySelectorAll('.group-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`.group-btn.${group}`).classList.add('active');
+        
+        const badge = document.getElementById('groupBadge');
+        badge.className = 'group-badge ' + group;
+        badge.textContent = group === 'science' ? 'বিজ্ঞান' : group === 'humanities' ? 'মানবিক' : 'ব্যবসায় শিক্ষা';
+    }
+    
+    function searchStudent() {
+        if (!currentSchoolId) { alert("⚠️ প্রথমে সেটিংস থেকে প্রতিষ্ঠান সক্রিয় করুন!"); return; }
+        
+        const roll = document.getElementById('rollNumber').value;
+        if (!roll) { alert('রোল নম্বর দিন'); return; }
+        
+        const student = studentData[currentGroup].find(s => s.roll == roll);
+        
+        if (student) {
+            displayStudent(student);
+            document.getElementById('marksheet').style.display = 'block';
+        } else {
+            alert(`রোল ${roll} এর কোনো শিক্ষার্থী পাওয়া যায়নি`);
+            document.getElementById('marksheet').style.display = 'none';
+        }
+    }
+    
+    function displayStudent(s) {
+        document.getElementById('displayName').textContent = s.name;
+        document.getElementById('displayRoll').textContent = s.roll;
+        document.getElementById('displayMerit').textContent = s.merit;
+        document.getElementById('displayResult').textContent = s.fail === 0 ? 'পাস' : 'ফেল';
+        
+        const tbody = document.getElementById('subjectRows');
+        tbody.innerHTML = '';
+        s.subjects.forEach(sub => {
+            tbody.innerHTML += `<tr>
+                <td>${sub.code}</td><td class="subject-name">${sub.name}</td>
+                <td>${sub.mcq}</td><td>${sub.cq}</td><td>${sub.prac}</td>
+                <td><strong>${sub.total}</strong></td><td>${sub.gp}</td>
+                <td style="color: ${sub.grade === 'F' ? 'red' : 'black'}; font-weight: bold;">${sub.grade}</td>
+            </tr>`;
+        });
+        
+        document.getElementById('totalScore').textContent = s.total;
+        document.getElementById('gpaScore').textContent = s.gpa;
+        document.getElementById('failCount').textContent = s.fail;
+    }
+    
+    function toggleAdmin() { document.getElementById('adminPanel').classList.toggle('show'); }
+    function adminLogin() {
+        if (document.getElementById('password').value === 'admin123') {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('uploadSection').style.display = 'block';
+            updateCounts();
+            // লগইনের পর বর্তমান স্কুল হাইলাইট করে দেয়া
+            if(currentSchoolId) highlightActiveInAdmin(currentSchoolId);
+        } else { alert('❌ ভুল পাসওয়ার্ড!'); }
+    }
+    
+    function updateCounts() {
+        document.getElementById('scienceCount').textContent = studentData.science.length;
+        document.getElementById('humanitiesCount').textContent = studentData.humanities.length;
+        document.getElementById('businessCount').textContent = studentData.business.length;
+    }
+
+    // CSV আপলোড এবং ডিলিট ফাংশন (আগের মতোই, শুধু currentSchoolId চেক সহ)
+    function uploadCSV(group) {
+        if (!currentSchoolId) { alert("⚠️ প্রথমে একটি প্রতিষ্ঠান সক্রিয় করুন!"); return; }
+        const input = document.getElementById(group + 'File');
+        const file = input.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const lines = e.target.result.split(/\r\n|\n/);
+            const students = [];
+            let currentStudent = null;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line === '') continue;
+                const cells = line.split(',').map(cell => cell.trim());
+                
+                if (cells[0] === 'Merit' || cells[0] === 'মেধাক্রম') continue;
+                
+                if (cells[0] && !isNaN(cells[0]) && cells[0] !== '') {
+                    if (currentStudent) students.push(currentStudent);
+                    currentStudent = {
+                        group: group, schoolId: currentSchoolId, schoolName: currentSchoolName,
+                        merit: cells[0] || '', name: cells[1] || '', roll: cells[2] || '',
+                        total: cells[12] || '0', gpa: cells[13] || '0',
+                        fail: cells[14] ? parseInt(cells[14]) || 0 : 0, subjects: []
+                    };
+                }
+                else if (currentStudent && cells[3] && cells[3] !== '') {
+                    const subject = {
+                        code: cells[3] || '', name: cells[4] || '', mcq: cells[5] || '-',
+                        cq: cells[6] || '-', prac: cells[7] || '-', total: cells[8] || '0',
+                        gp: cells[9] || '0', grade: cells[10] || ''
+                    };
+                    if (cells[11] && cells[11].includes('Failed')) { subject.grade = 'F'; subject.gp = '0'; }
+                    currentStudent.subjects.push(subject);
+                }
+            }
+            if (currentStudent) students.push(currentStudent);
+            
+            const batch = db.batch();
+            students.forEach(st => {
+                const docRef = studentsRef.doc();
+                batch.set(docRef, st);
+            });
+            
+            await batch.commit();
+            alert(`${students.length} জন শিক্ষার্থী যোগ হয়েছে`);
+            loadStudentsForSchool(currentSchoolId);
+            input.value = '';
+        };
+        reader.readAsText(file);
+    }
+    
+    async function deleteCurrentSchoolData() {
+        if (!currentSchoolId) { alert("প্রথমে প্রতিষ্ঠান সিলেক্ট করুন"); return; }
+        if (!confirm(`⚠️ "${currentSchoolName}" এর সব ডাটা ডিলিট হবে?`)) return;
+        
+        const snapshot = await studentsRef.where('schoolId', '==', currentSchoolId).get();
+        const batch = db.batch();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        
+        alert("ডাটা ডিলিট হয়েছে");
+        studentData = { science: [], humanities: [], business: [] };
+        updateCounts();
     }
 </script>
 </body>
